@@ -1,0 +1,88 @@
+SPECIFICATION file for stes
+===========================
+
+By Philip Hunt, last altered 21-Jul-2000.
+
+This file describes some of the design goals behind the stes encryption
+system.
+
+Stes is a steganographic encryption system designed to be used at the
+Unix prompt (it could be ported to other OSes without much difficulty).
+The best way to explain what it will do is through examples.
+
+Stes will enable a particular cyphertext to be decrypted into two or 
+more different plaintexts, depending on which key is used. To be more 
+precise:
+
+   $ stes --create ctf hello myletter.txt goodbye apicture.jpg
+
+This creates cypher text file <ctf> which contains an encrypted form of
+the data in the plaintext files <myletter.txt> and <apicture.jpg>. The
+data in <myletter.txt> is accessible by the key "hello", the data in
+<apicture.jpg> by the key "goodbye".
+
+Note that if you have the file <ctf>, there is no way of knowing how
+many different files are encrypted inside it; Cyphertext files will
+contain 'padding' so you can't infer contents by length, either.
+
+   $ stes --decode ctf goodbye xxx.jpg
+
+This looks in the file <ctf> and finds out whether there is any data
+in it using the key "goodbye". if there is data, it is put into the
+file <xxx.jpg>. (in this example, there is data, i.e. the contents of 
+file <apicture.jpg>. (Note that stes doesn't know what a jpg file is, 
+or anything else about file types))
+
+   $ stes --alter ctf hello anotherfile.doc
+
+This looks in the file <ctf> and finds if there is any data for the
+key "hello". In this example, there is, so the old data stored under
+the key "hello" is lost, and replaced with the new data from
+<anotherfile.doc>. Note that if <ctf> didn't already have the key 
+"hello", it could not be added; keys can only be put into a cyphertext 
+file when it is created.
+          
+If <anotherfile.doc> is too big for the room stes has set aside for
+the key "hello", then it is tough luck because stes cannot store
+it in <ctf>. 
+
+However, stes has a way round that: basically you will be able to 
+designate one or more keys to hold mostly empty space, then you can use 
+the "alter" function to reallocate that space to other keys.
+
+I.e:
+
+   $ stes --create ctf k1 pt1 k2 pt2 k3 pt3 -empty 100k k4 pt4 -empty 500k
+
+Creates <ctf> with 4 keys (k1..k4). k3 holds <pt3> plus at least 100k
+of spare room. k4 holds <pt4> plus at least 500k of spare room.
+
+Now,
+
+   $ stes --alter ctf k2 newpt2
+
+will throw out <pt2> from <ctf>, and attempt to replace it with <newpt2>.
+If <newpt2> is too big, this operation will fail. (k2) is able to hold at
+least the size of <pt2>; it might be able to hold more.
+
+But, when we created <ctf>, we ensured that it had at least 600KB of
+empty space. So we can say:
+
+   $ stes --altermk ctf k2 newpt2 k3
+
+"--altermk" means alter using multiple keys.
+
+Here, stes knows about k3's blocks, and can use k3's free space to put
+part of <newpt2> in. So if size(newpt2) <= size(pt2)+100KB, the operation
+will defintaly succeed.
+
+Want more space? Just do:
+
+   $ stes --altermk ctf k2 newpt2 k3 k4
+            
+and all of k3 and k4's reserve space (>= 600KB) can be used to store 
+newpt2. 
+
+
+
+;end.

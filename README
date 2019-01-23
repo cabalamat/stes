@@ -1,0 +1,110 @@
+README file for stes
+====================
+
+This is the README file for version 0.1 of stes.
+
+by Philip Hunt, <phil@comuno.com>
+Last altered 26-Jul-2000.
+Stes is Copyright (c) 2000 Philip Hunt
+
+Stes is a steganographic encryption system. It is released under
+the GNU General Public License, details of which can be found in the
+file COPYING.
+
+
+What stes does
+--------------
+
+For details of what I intend stes to be useful for, read the file 
+SPECIFICATION. At the moment (version 0.1) stes only encrypts and decrypts
+small files. At the moment it's more of a tehnology demonstration
+program than anything particularly useful.
+
+
+How to compile stes
+-------------------
+
+This is easy. Just go into the stes directory (the one this file is
+in) and type ``make'' at the command prompt.
+
+This will build the executable ``stesc'' and ``stesd''.
+
+The ``stesc'' executable allows you to create a ciphertext file. Eg
+if you type:
+
+   $ ./stesc ctf k1 pt1 key2 pt2 key3 pt3
+
+And <pt1>, <pt2> and <pt3> are already-existing files, then stesc will 
+create a ciphertext file <ctf> containing the data in those files, 
+encrypted using keys key1, key2 and key3 respectively.
+
+In the file <stesc.cpp> there's a line:
+   #define DEBUG_OUTPUT_CA 1
+if this flag is set to 1, then a file <CA.plain> is created which contains
+debugging information about the Check Area. To switch this off, set the
+flag to 0.
+
+To decrypt from a ciphertext file:
+
+   $ ./stesd ctf key2 new_pt2
+
+And the newly-created <new_pt2> will be the same as the original <pt2>.
+
+
+How it works
+------------
+
+The ciphertext file has two parts -- a Check Area (CA) and a Data Area (DA). 
+The DA actually holds the data and the CA tells stes which bits of the DA
+are associated with each key.
+
+The DA is split up into 50 Data Items (DIs).
+
+The CA is split up into 30 Check Items (CIs). Each CI contains:
+
+   - three 32-bit check numbers
+   - the length in bytes of the data associated with this key
+   - a bitmap which defines which DIs hold the data for this key
+
+The 3 check numbers (check1..check3) are multiples of 3 numbers 
+(mult1..mult3).
+
+When decrypting according to a key (k), the system will attempt to decrypt
+each CI with that key. If the decrypted check values are found to be 
+multiples of mult1..mult3 respectively, then the system knows that the key
+matches that CI (there's a 10^-12 probability of a false positive).
+
+Once a matching CI is found, the decryption program can read the rest of
+the CI: it knows the size of the data, and which DIs hold it. (It is stored
+from the lowest numbered DI upwards), so it can decrypt them with the key 
+and reproduce the data file,
+
+
+Future additions
+----------------
+
+1. include error-handling code. At the moment stes does very little checking
+for errors in input, e.g. wrong number of parameters
+
+2. Make the number and size of check items and data items variable. This 
+would mean that a ciphertext file would contain at its start three integers:
+the number of CIs, and the size of a CI and DI, in bytes. (The number of
+DIs could be inferred). Thus each ctf could be given sizes of these 
+parameters appropriate to it when it is created.
+
+3. Write code to implement the --alter and --altermk options in the
+specification.
+
+4. (Possibly) Have some system where the number of CIs isn't known, as
+they will seemlessly merge into the DA. In this model, DIs start at
+the end of the file and go sequentially downwards towards the beginning;
+CIs, as before, start at the begining of the file and go towards the
+end.
+
+5. Allow a key to be associated with a whole directory structure rather 
+than just a file; perhaps encoding the directories in a format such as
+tar file format. Write the stes software as a daemon which understands
+the NFS protocol, so it acts as a steganographic filesystem.
+
+
+;end
